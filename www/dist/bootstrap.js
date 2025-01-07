@@ -48,10 +48,76 @@ eval("// A dependency graph that contains any wasm must all be imported\r\n// as
 /******/ 	// expose the modules object (__webpack_modules__)
 /******/ 	__webpack_require__.m = __webpack_modules__;
 /******/ 	
-/******/ 	// expose the module cache
-/******/ 	__webpack_require__.c = __webpack_module_cache__;
-/******/ 	
 /************************************************************************/
+/******/ 	/* webpack/runtime/async module */
+/******/ 	(() => {
+/******/ 		var webpackQueues = typeof Symbol === "function" ? Symbol("webpack queues") : "__webpack_queues__";
+/******/ 		var webpackExports = typeof Symbol === "function" ? Symbol("webpack exports") : "__webpack_exports__";
+/******/ 		var webpackError = typeof Symbol === "function" ? Symbol("webpack error") : "__webpack_error__";
+/******/ 		var resolveQueue = (queue) => {
+/******/ 			if(queue && queue.d < 1) {
+/******/ 				queue.d = 1;
+/******/ 				queue.forEach((fn) => (fn.r--));
+/******/ 				queue.forEach((fn) => (fn.r-- ? fn.r++ : fn()));
+/******/ 			}
+/******/ 		}
+/******/ 		var wrapDeps = (deps) => (deps.map((dep) => {
+/******/ 			if(dep !== null && typeof dep === "object") {
+/******/ 				if(dep[webpackQueues]) return dep;
+/******/ 				if(dep.then) {
+/******/ 					var queue = [];
+/******/ 					queue.d = 0;
+/******/ 					dep.then((r) => {
+/******/ 						obj[webpackExports] = r;
+/******/ 						resolveQueue(queue);
+/******/ 					}, (e) => {
+/******/ 						obj[webpackError] = e;
+/******/ 						resolveQueue(queue);
+/******/ 					});
+/******/ 					var obj = {};
+/******/ 					obj[webpackQueues] = (fn) => (fn(queue));
+/******/ 					return obj;
+/******/ 				}
+/******/ 			}
+/******/ 			var ret = {};
+/******/ 			ret[webpackQueues] = x => {};
+/******/ 			ret[webpackExports] = dep;
+/******/ 			return ret;
+/******/ 		}));
+/******/ 		__webpack_require__.a = (module, body, hasAwait) => {
+/******/ 			var queue;
+/******/ 			hasAwait && ((queue = []).d = -1);
+/******/ 			var depQueues = new Set();
+/******/ 			var exports = module.exports;
+/******/ 			var currentDeps;
+/******/ 			var outerResolve;
+/******/ 			var reject;
+/******/ 			var promise = new Promise((resolve, rej) => {
+/******/ 				reject = rej;
+/******/ 				outerResolve = resolve;
+/******/ 			});
+/******/ 			promise[webpackExports] = exports;
+/******/ 			promise[webpackQueues] = (fn) => (queue && fn(queue), depQueues.forEach(fn), promise["catch"](x => {}));
+/******/ 			module.exports = promise;
+/******/ 			body((deps) => {
+/******/ 				currentDeps = wrapDeps(deps);
+/******/ 				var fn;
+/******/ 				var getResult = () => (currentDeps.map((d) => {
+/******/ 					if(d[webpackError]) throw d[webpackError];
+/******/ 					return d[webpackExports];
+/******/ 				}))
+/******/ 				var promise = new Promise((resolve) => {
+/******/ 					fn = () => (resolve(getResult));
+/******/ 					fn.r = 0;
+/******/ 					var fnQueue = (q) => (q !== queue && !depQueues.has(q) && (depQueues.add(q), q && !q.d && (fn.r++, q.push(fn))));
+/******/ 					currentDeps.map((dep) => (dep[webpackQueues](fnQueue)));
+/******/ 				});
+/******/ 				return fn.r ? promise : getResult();
+/******/ 			}, (err) => ((err ? reject(promise[webpackError] = err) : outerResolve(exports)), resolveQueue(queue)));
+/******/ 			queue && queue.d < 0 && (queue.d = 0);
+/******/ 		};
+/******/ 	})();
+/******/ 	
 /******/ 	/* webpack/runtime/define property getters */
 /******/ 	(() => {
 /******/ 		// define getter functions for harmony exports
@@ -157,6 +223,35 @@ eval("// A dependency graph that contains any wasm must all be imported\r\n// as
 /******/ 				Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 /******/ 			}
 /******/ 			Object.defineProperty(exports, '__esModule', { value: true });
+/******/ 		};
+/******/ 	})();
+/******/ 	
+/******/ 	/* webpack/runtime/wasm loading */
+/******/ 	(() => {
+/******/ 		__webpack_require__.v = (exports, wasmModuleId, wasmModuleHash, importsObj) => {
+/******/ 		
+/******/ 			var req = fetch(__webpack_require__.p + "" + wasmModuleHash + ".module.wasm");
+/******/ 			var fallback = () => (req
+/******/ 				.then((x) => (x.arrayBuffer()))
+/******/ 				.then((bytes) => (WebAssembly.instantiate(bytes, importsObj)))
+/******/ 				.then((res) => (Object.assign(exports, res.instance.exports))));
+/******/ 			return req.then((res) => {
+/******/ 				if (typeof WebAssembly.instantiateStreaming === "function") {
+/******/ 		
+/******/ 					return WebAssembly.instantiateStreaming(res, importsObj)
+/******/ 						.then(
+/******/ 							(res) => (Object.assign(exports, res.instance.exports)),
+/******/ 							(e) => {
+/******/ 								if(res.headers.get("Content-Type") !== "application/wasm") {
+/******/ 									console.warn("`WebAssembly.instantiateStreaming` failed because your server does not serve wasm with `application/wasm` MIME type. Falling back to `WebAssembly.instantiate` which is slower. Original error:\n", e);
+/******/ 									return fallback();
+/******/ 								}
+/******/ 								throw e;
+/******/ 							}
+/******/ 						);
+/******/ 				}
+/******/ 				return fallback();
+/******/ 			});
 /******/ 		};
 /******/ 	})();
 /******/ 	
@@ -273,236 +368,11 @@ eval("// A dependency graph that contains any wasm must all be imported\r\n// as
 /******/ 		chunkLoadingGlobal.push = webpackJsonpCallback.bind(null, chunkLoadingGlobal.push.bind(chunkLoadingGlobal));
 /******/ 	})();
 /******/ 	
-/******/ 	/* webpack/runtime/wasm chunk loading */
-/******/ 	(() => {
-/******/ 		// object to store loaded and loading wasm modules
-/******/ 		var installedWasmModules = {};
-/******/ 		
-/******/ 		function promiseResolve() { return Promise.resolve(); }
-/******/ 		
-/******/ 		var wasmImportedFuncCache0;
-/******/ 		var wasmImportedFuncCache1;
-/******/ 		var wasmImportedFuncCache2;
-/******/ 		var wasmImportedFuncCache3;
-/******/ 		var wasmImportedFuncCache4;
-/******/ 		var wasmImportedFuncCache5;
-/******/ 		var wasmImportedFuncCache6;
-/******/ 		var wasmImportedFuncCache7;
-/******/ 		var wasmImportedFuncCache8;
-/******/ 		var wasmImportedFuncCache9;
-/******/ 		var wasmImportedFuncCache10;
-/******/ 		var wasmImportedFuncCache11;
-/******/ 		var wasmImportedFuncCache12;
-/******/ 		var wasmImportedFuncCache13;
-/******/ 		var wasmImportedFuncCache14;
-/******/ 		var wasmImportedFuncCache15;
-/******/ 		var wasmImportedFuncCache16;
-/******/ 		var wasmImportedFuncCache17;
-/******/ 		var wasmImportedFuncCache18;
-/******/ 		var wasmImportedFuncCache19;
-/******/ 		var wasmImportedFuncCache20;
-/******/ 		var wasmImportedFuncCache21;
-/******/ 		var wasmImportedFuncCache22;
-/******/ 		var wasmImportedFuncCache23;
-/******/ 		var wasmImportedFuncCache24;
-/******/ 		var wasmImportedFuncCache25;
-/******/ 		var wasmImportedFuncCache26;
-/******/ 		var wasmImportedFuncCache27;
-/******/ 		var wasmImportedFuncCache28;
-/******/ 		var wasmImportedFuncCache29;
-/******/ 		var wasmImportedFuncCache30;
-/******/ 		var wasmImportedFuncCache31;
-/******/ 		var wasmImportedFuncCache32;
-/******/ 		var wasmImportObjects = {
-/******/ 			"../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.wasm": function() {
-/******/ 				return {
-/******/ 					"./lib_simulation_wasm_bg.js": {
-/******/ 						"__wbg_animal_unwrap": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache0 === undefined) wasmImportedFuncCache0 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache0["__wbg_animal_unwrap"](p0externref);
-/******/ 						},
-/******/ 						"__wbg_food_unwrap": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache1 === undefined) wasmImportedFuncCache1 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache1["__wbg_food_unwrap"](p0externref);
-/******/ 						},
-/******/ 						"__wbg_animal_new": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache2 === undefined) wasmImportedFuncCache2 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache2["__wbg_animal_new"](p0i32);
-/******/ 						},
-/******/ 						"__wbg_food_new": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache3 === undefined) wasmImportedFuncCache3 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache3["__wbg_food_new"](p0i32);
-/******/ 						},
-/******/ 						"__wbg_crypto_ed58b8e10a292839": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache4 === undefined) wasmImportedFuncCache4 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache4["__wbg_crypto_ed58b8e10a292839"](p0externref);
-/******/ 						},
-/******/ 						"__wbindgen_is_object": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache5 === undefined) wasmImportedFuncCache5 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache5["__wbindgen_is_object"](p0externref);
-/******/ 						},
-/******/ 						"__wbg_process_5c1d670bc53614b8": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache6 === undefined) wasmImportedFuncCache6 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache6["__wbg_process_5c1d670bc53614b8"](p0externref);
-/******/ 						},
-/******/ 						"__wbg_versions_c71aa1626a93e0a1": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache7 === undefined) wasmImportedFuncCache7 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache7["__wbg_versions_c71aa1626a93e0a1"](p0externref);
-/******/ 						},
-/******/ 						"__wbg_node_02999533c4ea02e3": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache8 === undefined) wasmImportedFuncCache8 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache8["__wbg_node_02999533c4ea02e3"](p0externref);
-/******/ 						},
-/******/ 						"__wbindgen_is_string": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache9 === undefined) wasmImportedFuncCache9 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache9["__wbindgen_is_string"](p0externref);
-/******/ 						},
-/******/ 						"__wbg_require_79b1e9274cde3c87": function() {
-/******/ 							if(wasmImportedFuncCache10 === undefined) wasmImportedFuncCache10 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache10["__wbg_require_79b1e9274cde3c87"]();
-/******/ 						},
-/******/ 						"__wbindgen_is_function": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache11 === undefined) wasmImportedFuncCache11 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache11["__wbindgen_is_function"](p0externref);
-/******/ 						},
-/******/ 						"__wbindgen_string_new": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache12 === undefined) wasmImportedFuncCache12 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache12["__wbindgen_string_new"](p0i32,p1i32);
-/******/ 						},
-/******/ 						"__wbg_msCrypto_0a36e2ec3a343d26": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache13 === undefined) wasmImportedFuncCache13 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache13["__wbg_msCrypto_0a36e2ec3a343d26"](p0externref);
-/******/ 						},
-/******/ 						"__wbg_randomFillSync_ab2cfe79ebbf2740": function(p0externref,p1externref) {
-/******/ 							if(wasmImportedFuncCache14 === undefined) wasmImportedFuncCache14 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache14["__wbg_randomFillSync_ab2cfe79ebbf2740"](p0externref,p1externref);
-/******/ 						},
-/******/ 						"__wbg_getRandomValues_bcb4912f16000dc4": function(p0externref,p1externref) {
-/******/ 							if(wasmImportedFuncCache15 === undefined) wasmImportedFuncCache15 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache15["__wbg_getRandomValues_bcb4912f16000dc4"](p0externref,p1externref);
-/******/ 						},
-/******/ 						"__wbg_newnoargs_fd9e4bf8be2bc16d": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache16 === undefined) wasmImportedFuncCache16 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache16["__wbg_newnoargs_fd9e4bf8be2bc16d"](p0i32,p1i32);
-/******/ 						},
-/******/ 						"__wbg_call_b0d8e36992d9900d": function(p0externref,p1externref) {
-/******/ 							if(wasmImportedFuncCache17 === undefined) wasmImportedFuncCache17 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache17["__wbg_call_b0d8e36992d9900d"](p0externref,p1externref);
-/******/ 						},
-/******/ 						"__wbindgen_is_undefined": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache18 === undefined) wasmImportedFuncCache18 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache18["__wbindgen_is_undefined"](p0externref);
-/******/ 						},
-/******/ 						"__wbg_call_500db948e69c7330": function(p0externref,p1externref,p2externref) {
-/******/ 							if(wasmImportedFuncCache19 === undefined) wasmImportedFuncCache19 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache19["__wbg_call_500db948e69c7330"](p0externref,p1externref,p2externref);
-/******/ 						},
-/******/ 						"__wbg_static_accessor_GLOBAL_THIS_1a6eb482d12c9bfb": function() {
-/******/ 							if(wasmImportedFuncCache20 === undefined) wasmImportedFuncCache20 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache20["__wbg_static_accessor_GLOBAL_THIS_1a6eb482d12c9bfb"]();
-/******/ 						},
-/******/ 						"__wbg_static_accessor_SELF_1dc398a895c82351": function() {
-/******/ 							if(wasmImportedFuncCache21 === undefined) wasmImportedFuncCache21 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache21["__wbg_static_accessor_SELF_1dc398a895c82351"]();
-/******/ 						},
-/******/ 						"__wbg_static_accessor_WINDOW_ae1c80c7eea8d64a": function() {
-/******/ 							if(wasmImportedFuncCache22 === undefined) wasmImportedFuncCache22 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache22["__wbg_static_accessor_WINDOW_ae1c80c7eea8d64a"]();
-/******/ 						},
-/******/ 						"__wbg_static_accessor_GLOBAL_0be7472e492ad3e3": function() {
-/******/ 							if(wasmImportedFuncCache23 === undefined) wasmImportedFuncCache23 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache23["__wbg_static_accessor_GLOBAL_0be7472e492ad3e3"]();
-/******/ 						},
-/******/ 						"__wbg_buffer_61b7ce01341d7f88": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache24 === undefined) wasmImportedFuncCache24 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache24["__wbg_buffer_61b7ce01341d7f88"](p0externref);
-/******/ 						},
-/******/ 						"__wbg_newwithbyteoffsetandlength_ba35896968751d91": function(p0externref,p1i32,p2i32) {
-/******/ 							if(wasmImportedFuncCache25 === undefined) wasmImportedFuncCache25 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache25["__wbg_newwithbyteoffsetandlength_ba35896968751d91"](p0externref,p1i32,p2i32);
-/******/ 						},
-/******/ 						"__wbg_new_3ff5b33b1ce712df": function(p0externref) {
-/******/ 							if(wasmImportedFuncCache26 === undefined) wasmImportedFuncCache26 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache26["__wbg_new_3ff5b33b1ce712df"](p0externref);
-/******/ 						},
-/******/ 						"__wbg_set_23d69db4e5c66a6e": function(p0externref,p1externref,p2i32) {
-/******/ 							if(wasmImportedFuncCache27 === undefined) wasmImportedFuncCache27 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache27["__wbg_set_23d69db4e5c66a6e"](p0externref,p1externref,p2i32);
-/******/ 						},
-/******/ 						"__wbg_newwithlength_34ce8f1051e74449": function(p0i32) {
-/******/ 							if(wasmImportedFuncCache28 === undefined) wasmImportedFuncCache28 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache28["__wbg_newwithlength_34ce8f1051e74449"](p0i32);
-/******/ 						},
-/******/ 						"__wbg_subarray_46adeb9b86949d12": function(p0externref,p1i32,p2i32) {
-/******/ 							if(wasmImportedFuncCache29 === undefined) wasmImportedFuncCache29 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache29["__wbg_subarray_46adeb9b86949d12"](p0externref,p1i32,p2i32);
-/******/ 						},
-/******/ 						"__wbindgen_throw": function(p0i32,p1i32) {
-/******/ 							if(wasmImportedFuncCache30 === undefined) wasmImportedFuncCache30 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache30["__wbindgen_throw"](p0i32,p1i32);
-/******/ 						},
-/******/ 						"__wbindgen_memory": function() {
-/******/ 							if(wasmImportedFuncCache31 === undefined) wasmImportedFuncCache31 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache31["__wbindgen_memory"]();
-/******/ 						},
-/******/ 						"__wbindgen_init_externref_table": function() {
-/******/ 							if(wasmImportedFuncCache32 === undefined) wasmImportedFuncCache32 = __webpack_require__.c["../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.js"].exports;
-/******/ 							return wasmImportedFuncCache32["__wbindgen_init_externref_table"]();
-/******/ 						}
-/******/ 					}
-/******/ 				};
-/******/ 			},
-/******/ 		};
-/******/ 		
-/******/ 		var wasmModuleMap = {
-/******/ 			"index_js": [
-/******/ 				"../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.wasm"
-/******/ 			]
-/******/ 		};
-/******/ 		
-/******/ 		// object with all WebAssembly.instance exports
-/******/ 		__webpack_require__.w = {};
-/******/ 		
-/******/ 		// Fetch + compile chunk loading for webassembly
-/******/ 		__webpack_require__.f.wasm = function(chunkId, promises) {
-/******/ 		
-/******/ 			var wasmModules = wasmModuleMap[chunkId] || [];
-/******/ 		
-/******/ 			wasmModules.forEach(function(wasmModuleId, idx) {
-/******/ 				var installedWasmModuleData = installedWasmModules[wasmModuleId];
-/******/ 		
-/******/ 				// a Promise means "currently loading" or "already loaded".
-/******/ 				if(installedWasmModuleData)
-/******/ 					promises.push(installedWasmModuleData);
-/******/ 				else {
-/******/ 					var importObject = wasmImportObjects[wasmModuleId]();
-/******/ 					var req = fetch(__webpack_require__.p + "" + {"index_js":{"../libs/simulation-wasm/pkg/lib_simulation_wasm_bg.wasm":"36b5830d277ec2d4aaaf"}}[chunkId][wasmModuleId] + ".module.wasm");
-/******/ 					var promise;
-/******/ 					if(importObject && typeof importObject.then === 'function' && typeof WebAssembly.compileStreaming === 'function') {
-/******/ 						promise = Promise.all([WebAssembly.compileStreaming(req), importObject]).then(function(items) {
-/******/ 							return WebAssembly.instantiate(items[0], items[1]);
-/******/ 						});
-/******/ 					} else if(typeof WebAssembly.instantiateStreaming === 'function') {
-/******/ 						promise = WebAssembly.instantiateStreaming(req, importObject);
-/******/ 					} else {
-/******/ 						var bytesPromise = req.then(function(x) { return x.arrayBuffer(); });
-/******/ 						promise = bytesPromise.then(function(bytes) {
-/******/ 							return WebAssembly.instantiate(bytes, importObject);
-/******/ 						});
-/******/ 					}
-/******/ 					promises.push(installedWasmModules[wasmModuleId] = promise.then(function(res) {
-/******/ 						return __webpack_require__.w[wasmModuleId] = (res.instance || res).exports;
-/******/ 					}));
-/******/ 				}
-/******/ 			});
-/******/ 		};
-/******/ 	})();
-/******/ 	
 /************************************************************************/
 /******/ 	
-/******/ 	// module cache are used so entry inlining is disabled
 /******/ 	// startup
 /******/ 	// Load entry module and return exports
+/******/ 	// This entry module can't be inlined because the eval devtool is used.
 /******/ 	var __webpack_exports__ = __webpack_require__("./bootstrap.js");
 /******/ 	
 /******/ })()
